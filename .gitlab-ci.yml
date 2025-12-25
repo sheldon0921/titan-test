@@ -1,65 +1,63 @@
-# 基础镜像：使用 Docker 官方镜像，因为它包含 docker 命令
+# .gitlab-ci.yml
+
+# 使用 Docker 官方镜像作为基础环境 (用来执行 docker 命令)
 image: docker:latest
 
-# 开启 Docker-in-Docker 模式，这是在 CI 里运行 Docker 的必要条件
+# 【关键】开启 Docker-in-Docker 服务
+# 这允许我们在容器里面再运行一个 Docker 守护进程，用来构建你的镜像
 services:
   - docker:dind
 
 # 定义全局变量
 variables:
-  # 使用 overlay2 驱动，性能更好
-  DOCKER_DRIVER: overlay2
-  # 禁用 TLS 验证（私有部署常用，防止证书报错）
+  # 针对私有/测试环境，禁用 TLS 验证，防止证书报错
   DOCKER_TLS_CERTDIR: ""
+  # 使用性能更好的存储驱动
+  DOCKER_DRIVER: overlay2
 
-# 定义流水线的阶段
 stages:
   - test
 
-# --- 核心任务：构建并测试 ---
+# --- 核心任务：自动化测试 ---
 automation-test:
   stage: test
-  # 即使测试失败，也不要立即中断，因为我们要发通知和保存报告
+  # 即使测试失败，也不要立即中断流水线 (为了发通知和保存报告)
   allow_failure: false
 
-  # 运行前的准备工作
+  # 运行前的检查
   before_script:
-    - docker info
-    - echo "🏗️ 准备构建镜像..."
+    - docker info # 确认 Docker 服务正常启动
+    - echo "🏗️ 准备构建测试环境..."
 
   script:
-    # 1. 构建镜像
-    # 这里可以利用 --cache-from 优化构建速度（进阶），目前先保持简单
+    # 1. 构建镜像 (会使用你项目里的 Dockerfile)
     - docker build -t titan-test .
 
-    # 2. 准备报告目录
+    # 2. 创建报告目录
     - mkdir -p reports
 
     # 3. 运行测试
-    # -e ENV=$ENV : 将 GitLab 界面配置的环境变量传给容器
-    # || true : 即使测试挂了，也强制返回成功，保证后续脚本能运行（比如发通知）
-    # 注意：我们把退出码保存在 EXIT_CODE 变量里，后面用来决定任务状态
-    - echo "🚀 开始运行测试 (环境: $ENV)..."
+    # -e ENV=$ENV : 将 GitLab 界面配置的环境变量(dev/prod)传给容器
+    # || EXIT_CODE=$? : 捕获退出码，防止脚本直接挂掉，保证后面能发通知
+    - echo "🚀 开始运行自动化测试 (环境: $ENV)..."
     - docker run --rm -e ENV=$ENV -v $PWD/reports:/app/reports titan-test pytest --alluredir=/app/reports || EXIT_CODE=$?
 
-    # 4. 如果测试失败，手动抛出错误，确流水线状态显示为“Failed”
-    # (如果不加这一步，因为上面加了 || true，GitLab 会以为测试永远是成功的)
+    # 4. 根据测试结果决定任务状态
     - if [ "$EXIT_CODE" != "0" ]; then echo "❌ 测试执行失败"; exit 1; fi
 
-  # --- 无论成功失败，最后都会执行 ---
+  # --- 善后工作：发送通知 ---
   after_script:
-    - echo "🔔 正在发送测试结果通知..."
-    # 再次启动容器，专门运行通知脚本
-    # 传入 CI_JOB_STATUS (success/failed) 和 Webhook 地址
+    - echo "🔔 测试结束，正在处理通知..."
+    # 再次启动容器运行通知脚本 (如果不发通知，这部分可以删掉)
     - |
       docker run --rm \
       -e NOTIFY_WEBHOOK=$NOTIFY_WEBHOOK \
       -e CI_PIPELINE_URL=$CI_PIPELINE_URL \
       titan-test python lib/notify.py $CI_JOB_STATUS
 
-  # --- 保存测试报告 ---
+  # --- 保存产物：Allure 报告数据 ---
   artifacts:
-    when: always  # 无论成功失败都保存
+    when: always     # 无论成功失败都保存
     paths:
-      - reports/  # 保存 reports 文件夹
-    expire_in: 3 days  # 报告保留3天
+      - reports/     # 保存 reports 文件夹到 GitLab 服务器
+    expire_in: 3 days # 只保留3天，节省空间
