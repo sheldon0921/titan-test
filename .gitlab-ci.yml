@@ -1,0 +1,48 @@
+# .gitlab-ci.yml
+
+# 指定使用 docker 官方镜像作为基础环境
+image: docker:latest
+
+# 开启 Docker-in-Docker 服务 (必须项，否则无法执行 docker build)
+services:
+  - docker:dind
+
+stages:
+  - test
+
+# 定义一个名为 'automation-test' 的任务
+automation-test:
+  stage: test
+  # 发生故障时是否允许流水线继续 (通常测试挂了就该停，这里设为 false)
+  allow_failure: false
+
+  script:
+    # 1. 打印版本信息，确认环境正常
+    - docker --version
+
+    # 2. 构建镜像 (跟你本地一模一样的命令)
+    - echo "🏗️ 开始构建测试镜像..."
+    - docker build -t titan-test .
+
+    # 3. 准备挂载目录 (CI 环境里也要建文件夹)
+    - mkdir -p reports
+
+    # 4. 运行测试
+    # 注意：这里我们加上了 || true
+    # 技巧：通常测试失败命令会返回非0，导致 CI 直接报错停止。
+    # 加上 || true 是为了让脚本继续往下跑，去保存测试报告 (Artifacts)，否则报告都没了。
+    - echo "🚀 开始运行自动化测试..."
+    # 把变量传进去
+#    - docker run --rm -e ENV=$ENV ...
+    - docker run --rm -e ENV=$ENV -v $PWD/reports:/app/reports titan-test pytest --alluredir=/app/reports || true
+
+    # 5. 简单检查一下有没有生成文件
+    - ls -l reports/
+
+  # 【关键配置】保留产物 (Artifacts)
+  # 测试跑完了容器会销毁，我们需要把 reports 文件夹“抓”出来保存到 GitLab 服务器上
+  artifacts:
+    when: always  # 无论测试成功还是失败，都保存报告
+    paths:
+      - reports/  # 要保存的目录
+    expire_in: 1 week  # 报告只保留一周，节省服务器空间
