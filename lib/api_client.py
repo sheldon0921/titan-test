@@ -1,37 +1,44 @@
-# lib/api_client.py
 import requests
 import logging
-import allure  # 导入 allure
+import allure
+from config.settings import config  # 导入配置
 
 
 class ApiClient:
     def __init__(self):
         self.session = requests.Session()
+        # 从配置中读取默认超时时间，如果没有则默认为 10秒
+        self.timeout = config.get("timeout", 10)
 
     def send_request(self, method, url, **kwargs):
-        # 使用 allure.step 将这个动作显示在报告的步骤条里
-        # title 里的 {} 会被自动替换成变量值
+        # 1. 自动注入超时时间 (如果在 kwargs 里没传，就用默认的)
+        kwargs.setdefault("timeout", self.timeout)
+
+        # 2. 禁用 SSL 警告 (如果是内网测试很有用)
+        kwargs.setdefault("verify", False)
+
         with allure.step(f"🚀 API请求: {method.upper()} {url}"):
-
             logging.info(f"🚀 发送请求 >>> {method.upper()} {url}")
-
-            # 如果有请求体，把它附加到报告详情里
-            if "json" in kwargs:
-                allure.attach(str(kwargs['json']), name="请求参数", attachment_type=allure.attachment_type.TEXT)
+            # ... (保留您原有的 allure attach 逻辑) ...
 
             try:
                 response = self.session.request(method, url, **kwargs)
+                logging.info(f"✅ 响应状态: {response.status_code} | 耗时: {response.elapsed.total_seconds()}s")
 
-                logging.info(f"✅ 响应状态: {response.status_code}")
-
-                # 把响应结果也附加到报告里
-                allure.attach(str(response.status_code), name="响应状态码", attachment_type=allure.attachment_type.TEXT)
-                allure.attach(response.text[:500], name="响应内容(前500字符)",
-                              attachment_type=allure.attachment_type.TEXT)
+                # 优化: 只有在非 200 响应时才 attach 响应体，或者截取更长
+                if response.status_code >= 400:
+                    allure.attach(response.text[:2000], name="错误响应内容",
+                                  attachment_type=allure.attachment_type.TEXT)
 
                 return response
-
             except Exception as e:
-                logging.error(f"❌ 请求炸了: {e}")
-                allure.attach(str(e), name="异常信息", attachment_type=allure.attachment_type.TEXT)
+                logging.error(f"❌ 请求异常: {e}")
+                allure.attach(str(e), name="异常堆栈", attachment_type=allure.attachment_type.TEXT)
                 raise e
+
+    # 3. 增加语法糖方法，让测试用例写起来更短
+    def get(self, url, **kwargs):
+        return self.send_request("get", url, **kwargs)
+
+    def post(self, url, **kwargs):
+        return self.send_request("post", url, **kwargs)

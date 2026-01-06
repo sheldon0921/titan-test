@@ -1,6 +1,7 @@
 # config/settings.py
 import os
 import yaml
+import logging
 
 # 1. 获取当前项目的根目录
 # (这样无论你在哪里运行命令，都能找到文件)
@@ -19,5 +20,7 @@ with open(config_path, "r", encoding="utf-8") as f:
 # 4. 拿到最终的配置字典
 # 如果 target_env 是 'dev'，就只取 yaml 里 dev 下面的内容
 config = raw_config.get(target_env)
+logging.basicConfig(level=logging.INFO)
+logging.info(f"👻 当前环境: {target_env} | Base URL: {config['base_url']}")
 
-print(f"👻 当前运行环境: {target_env}, Base URL: {config['base_url']}")
+# print(f"👻 当前运行环境: {target_env}, Base URL: {config['base_url']}")

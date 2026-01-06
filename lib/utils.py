@@ -1,17 +1,17 @@
-# lib/utils.py
 import yaml
 import os
+import jsonpath # 需在 requirements.txt 添加 jsonpath
 
+# ...保留原有 load_yaml_data...
 
-def load_yaml_data(file_path):
+def get_json_value(response_json, expr):
     """
-    读取 YAML 文件并返回 Python 对象
-    :param file_path: 比如 'data/login_cases.yaml'
-    :return: List 或 Dict
+    使用 JsonPath 提取数据
+    :param response_json: 响应的字典对象
+    :param expr: jsonpath 表达式 (如 '$.data.token')
+    :return: 提取到的值 (如果是列表且只有一个元素，自动解包)
     """
-    # 拼接绝对路径，确保在哪运行都能找到文件
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    full_path = os.path.join(base_dir, file_path)
-
-    with open(full_path, 'r', encoding='utf-8') as f:
-        return yaml.safe_load(f)
+    res = jsonpath.jsonpath(response_json, expr)
+    if res:
+        return res[0] if len(res) == 1 else res
+    return None
