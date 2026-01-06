@@ -1,17 +1,13 @@
 import pytest
 import allure
 from api.auth_api import AuthApi
-from lib.utils import load_yaml_data
+from lib.utils import load_yaml_data, get_json_value # 👈 导入新工具
 
-# 加载数据
 test_data = load_yaml_data("data/login_cases.yaml")
 
 @allure.feature("用户认证模块")
 class TestLogin:
-
-    def setup_method(self):
-        # 每个用例开始前实例化 API 对象
-        self.auth_api = AuthApi()
+    # ... setup_method 不变 ...
 
     @allure.story("登录场景测试")
     @pytest.mark.parametrize("case_info", test_data, ids=[i['title'] for i in test_data])
@@ -19,10 +15,13 @@ class TestLogin:
         payload = case_info['payload']
         expected = case_info['expected']
 
-        # 1. 调用业务方法 (代码可读性变强)
         res = self.auth_api.login(payload['username'], payload['password'])
 
-        # 2. 断言
+        # 断言状态码
         assert res.status_code == expected['status_code']
-        # 建议封装通用的 JSON 断言工具
-        assert res.json()['json']['username'] == payload['username']
+
+        # 🎯 使用 JSONPath 进行灵活断言
+        # 假设 httpbin 返回结构很深，用 jsonpath 提取会非常方便
+        # 例如验证返回的 json 数据中 username 是否正确
+        actual_user = get_json_value(res.json(), "$.json.username")
+        assert actual_user == payload['username']

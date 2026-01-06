@@ -2,3 +2,4 @@ pytest
 requests
 pyyaml
 allure-pytest
+jsonpath  # 👈 必须补上这一行

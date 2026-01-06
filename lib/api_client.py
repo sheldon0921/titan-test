@@ -1,8 +1,10 @@
 import requests
 import logging
 import allure
+import urllib3  # 👈 导入这个库
 from config.settings import config  # 导入配置
-
+# 禁用安全请求警告
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class ApiClient:
     def __init__(self):

@@ -24,9 +24,12 @@ class AuthApi(ApiClient):
         # 直接调用父类的 send_request
         return self.send_request("post", url, json=payload)
 
+
     def check_auth(self):
         """
         鉴权验证接口
         """
-        url = f"https://httpbin.org/bearer"
+        # ❌ 不要写死: url = "https://httpbin.org/bearer"
+        # ✅ 使用拼接: 这样会根据 config/env.yaml 自动切换环境
+        url = f"{self.base_url}/bearer"
         return self.send_request("get", url)
