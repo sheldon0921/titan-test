@@ -2,4 +2,5 @@ pytest
 requests
 pyyaml
 allure-pytest
-jsonpath  # 👈 必须补上这一行
+jsonpath
+pymysql  # 👈 新增：用于数据库操作
