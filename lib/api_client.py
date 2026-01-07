@@ -1,44 +1,64 @@
 import requests
 import logging
 import allure
-import urllib3  # 👈 导入这个库
-from config.settings import config  # 导入配置
+import urllib3
+import json
+from config.settings import config
+
 # 禁用安全请求警告
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 
 class ApiClient:
     def __init__(self):
         self.session = requests.Session()
-        # 从配置中读取默认超时时间，如果没有则默认为 10秒
         self.timeout = config.get("timeout", 10)
 
     def send_request(self, method, url, **kwargs):
-        # 1. 自动注入超时时间 (如果在 kwargs 里没传，就用默认的)
+        """
+        统一请求发送方法
+        """
         kwargs.setdefault("timeout", self.timeout)
-
-        # 2. 禁用 SSL 警告 (如果是内网测试很有用)
         kwargs.setdefault("verify", False)
 
+        # 日志美化: 尝试将 json 参数转为字符串
+        log_data = kwargs.get("json", kwargs.get("data", {}))
+
         with allure.step(f"🚀 API请求: {method.upper()} {url}"):
-            logging.info(f"🚀 发送请求 >>> {method.upper()} {url}")
-            # ... (保留您原有的 allure attach 逻辑) ...
+            logging.info(f"-------------------------------------------------------")
+            logging.info(f"🚀 Request: {method.upper()} {url}")
+            logging.info(f"💾 Headers: {kwargs.get('headers', self.session.headers)}")
+            logging.info(f"📦 Data: {log_data}")
+
+            # Allure 附件: 请求详情
+            allure.attach(str(log_data), name="Request Body", attachment_type=allure.attachment_type.TEXT)
 
             try:
                 response = self.session.request(method, url, **kwargs)
-                logging.info(f"✅ 响应状态: {response.status_code} | 耗时: {response.elapsed.total_seconds()}s")
 
-                # 优化: 只有在非 200 响应时才 attach 响应体，或者截取更长
-                if response.status_code >= 400:
-                    allure.attach(response.text[:2000], name="错误响应内容",
-                                  attachment_type=allure.attachment_type.TEXT)
+                # 尝试解析 JSON 以便美化打印
+                try:
+                    resp_json = response.json()
+                    log_resp = json.dumps(resp_json, ensure_ascii=False, indent=2)
+                except:
+                    log_resp = response.text[:1000]  # 非 JSON 或太长，只取前1000字符
+
+                logging.info(f"✅ Response Status: {response.status_code} | Time: {response.elapsed.total_seconds()}s")
+                logging.info(f"📄 Response Data: \n{log_resp}")
+                logging.info(f"-------------------------------------------------------")
+
+                # Allure 附件: 响应详情
+                allure.attach(str(response.status_code), name="Status Code",
+                              attachment_type=allure.attachment_type.TEXT)
+                allure.attach(log_resp, name="Response Body", attachment_type=allure.attachment_type.TEXT)
 
                 return response
+
             except Exception as e:
                 logging.error(f"❌ 请求异常: {e}")
-                allure.attach(str(e), name="异常堆栈", attachment_type=allure.attachment_type.TEXT)
+                allure.attach(str(e), name="Exception", attachment_type=allure.attachment_type.TEXT)
                 raise e
 
-    # 3. 增加语法糖方法，让测试用例写起来更短
     def get(self, url, **kwargs):
         return self.send_request("get", url, **kwargs)
 
