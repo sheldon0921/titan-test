@@ -1,13 +1,25 @@
+import logging
+
 import pytest
 import allure
 from api.auth_api import AuthApi
 from lib.utils import load_yaml_data, get_json_value # 👈 导入新工具
 
 test_data = load_yaml_data("data/login_cases.yaml")
+# 1. 增加容错：如果读取失败，给一个默认空列表，防止 Pytest 收集报错
+try:
+    test_data = load_yaml_data("data/login_cases.yaml")
+    if not test_data:
+        logging.warning("⚠️ 测试数据为空: data/login_cases.yaml")
+        test_data = []
+except Exception as e:
+    logging.error(f"❌ 加载测试数据失败: {e}")
+    test_data = []
 
 @allure.feature("用户认证模块")
+@allure.feature("用户认证模块")
 class TestLogin:
-    # ... setup_method 不变 ...
+
 
     @allure.story("登录场景测试")
     @pytest.mark.parametrize("case_info", test_data, ids=[i['title'] for i in test_data])

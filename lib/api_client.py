@@ -2,10 +2,9 @@ import requests
 import logging
 import allure
 import urllib3
-import json
+from typing import Optional, Dict, Any  # 引入类型提示
 from config.settings import config
 
-# 禁用安全请求警告
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
@@ -14,53 +13,47 @@ class ApiClient:
         self.session = requests.Session()
         self.timeout = config.get("timeout", 10)
 
-    def send_request(self, method, url, **kwargs):
+    def send_request(self, method: str, url: str, **kwargs) -> requests.Response:
         """
-        统一请求发送方法
+        发送 HTTP 请求的通用方法
+        :param method: 请求方法 (GET, POST...)
+        :param url: 请求地址
+        :param kwargs: requests 支持的其他参数 (params, json, headers...)
+        :return: Response 对象
         """
         kwargs.setdefault("timeout", self.timeout)
         kwargs.setdefault("verify", False)
 
-        # 日志美化: 尝试将 json 参数转为字符串
-        log_data = kwargs.get("json", kwargs.get("data", {}))
+        # 优化：打印更详细的 Header 信息以便调试（仅在 Debug 模式）
+        # logging.debug(f"Headers: {kwargs.get('headers')}")
 
         with allure.step(f"🚀 API请求: {method.upper()} {url}"):
-            logging.info(f"-------------------------------------------------------")
-            logging.info(f"🚀 Request: {method.upper()} {url}")
-            logging.info(f"💾 Headers: {kwargs.get('headers', self.session.headers)}")
-            logging.info(f"📦 Data: {log_data}")
-
-            # Allure 附件: 请求详情
-            allure.attach(str(log_data), name="Request Body", attachment_type=allure.attachment_type.TEXT)
+            logging.info(f"🚀 发送请求 >>> {method.upper()} {url}")
 
             try:
                 response = self.session.request(method, url, **kwargs)
 
-                # 尝试解析 JSON 以便美化打印
-                try:
-                    resp_json = response.json()
-                    log_resp = json.dumps(resp_json, ensure_ascii=False, indent=2)
-                except:
-                    log_resp = response.text[:1000]  # 非 JSON 或太长，只取前1000字符
+                # 优化：状态码日志颜色区分（如果是支持颜色的控制台）
+                log_msg = f"✅ 响应状态: {response.status_code} | 耗时: {response.elapsed.total_seconds()}s"
+                if response.status_code >= 400:
+                    logging.error(log_msg)
+                else:
+                    logging.info(log_msg)
 
-                logging.info(f"✅ Response Status: {response.status_code} | Time: {response.elapsed.total_seconds()}s")
-                logging.info(f"📄 Response Data: \n{log_resp}")
-                logging.info(f"-------------------------------------------------------")
-
-                # Allure 附件: 响应详情
-                allure.attach(str(response.status_code), name="Status Code",
-                              attachment_type=allure.attachment_type.TEXT)
-                allure.attach(log_resp, name="Response Body", attachment_type=allure.attachment_type.TEXT)
+                # 错误处理逻辑保留...
+                if response.status_code >= 400:
+                    allure.attach(response.text[:2000], name="错误响应内容",
+                                  attachment_type=allure.attachment_type.TEXT)
 
                 return response
-
             except Exception as e:
                 logging.error(f"❌ 请求异常: {e}")
-                allure.attach(str(e), name="Exception", attachment_type=allure.attachment_type.TEXT)
+                allure.attach(str(e), name="异常堆栈", attachment_type=allure.attachment_type.TEXT)
                 raise e
 
-    def get(self, url, **kwargs):
+    # 类型提示让调用更清晰
+    def get(self, url: str, **kwargs) -> requests.Response:
         return self.send_request("get", url, **kwargs)
 
-    def post(self, url, **kwargs):
+    def post(self, url: str, **kwargs) -> requests.Response:
         return self.send_request("post", url, **kwargs)
