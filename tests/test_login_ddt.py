@@ -17,10 +17,9 @@ except Exception as e:
     test_data = []
 
 @allure.feature("用户认证模块")
-@allure.feature("用户认证模块")
 class TestLogin:
-
-
+    def setup_method(self):
+        self.auth_api = AuthApi()
     @allure.story("登录场景测试")
     @pytest.mark.parametrize("case_info", test_data, ids=[i['title'] for i in test_data])
     def test_login_scenarios(self, case_info):

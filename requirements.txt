@@ -3,4 +3,5 @@ requests
 pyyaml
 allure-pytest
 jsonpath
-pymysql  # 👈 新增：用于数据库操作
+pymysql
+urllib3<2.0.0  # 👈 新增这一行，强制使用 1.x 版本
