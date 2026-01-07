@@ -1,6 +1,15 @@
 import pytest
 from api.auth_api import AuthApi
 import logging
+import sys
+import os
+# 获取当前文件 (conftest.py) 所在的目录，也就是项目根目录
+project_root = os.path.dirname(os.path.abspath(__file__))
+
+# 如果根目录不在 sys.path 中，就把它加进去
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
 
 
 @pytest.fixture(scope="session")
