@@ -37,4 +37,6 @@ def auth_client():
 
     yield api
 
-    logging.info("🚪 --- 测试会话结束 ---")
+    # 👉 新增：测试结束后清理资源
+    logging.info("🚪 --- 测试会话结束，正在清理资源 ---")
+    api.close()
