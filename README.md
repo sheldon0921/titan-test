@@ -1,32 +1,55 @@
-# Titan-Test 接口自动化测试框架
+Titan-Test 接口自动化测试框架
 
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
-![Python](https://img.shields.io/badge/python-3.9+-blue)
-![Pytest](https://img.shields.io/badge/pytest-7.0+-yellow)
+基于 Pytest + Requests + Allure + Docker 构建的轻量级接口自动化测试框架。
 
-基于 Pytest + Requests + Allure + Docker 构建的轻量级接口自动化测试框架。采用 API Object 分层设计模式，支持多环境切换、数据驱动测试及 CI/CD 集成。
+📊 测试报告可视化
 
-## 📂 项目结构
+本项目已集成 GitHub Pages，每次代码提交或定时运行后，会自动生成在线测试报告。
 
-```text
+在线查看 (CI/CD)
+
+进入 GitHub 仓库的 Actions 页面查看运行日志。
+
+运行结束后，钉钉群机器人会推送通知，点击通知中的 [在线报告] 链接即可。
+
+或者直接访问：https://<你的GitHub用户名>.github.io/titan-test/ 查看最新报告。
+
+首次配置说明：
+
+确保在仓库 Settings -> Pages 中，将 Source 设置为 gh-pages 分支（该分支会在第一次 CI 运行成功后自动创建）。
+
+本地查看
+
+如果你在本地运行了测试：
+
+# 1. 运行测试并生成数据
+pytest --alluredir=./allure-results
+
+# 2. 启动本地服务查看报告 (需要安装 Allure 命令行工具)
+allure serve ./allure-results
+
+
+📂 项目结构
+
 titan-test/
-├── api/                # API 封装层 (API Object)
-│   └── auth_api.py     # 认证模块接口
+├── .github/workflows/  # CI/CD 配置 (包含 Allure 报告生成)
+├── api/                # API 封装层
 ├── config/             # 配置文件
-│   ├── env.yaml        # 多环境配置 (Dev/Prod)
-│   └── settings.py     # 配置加载逻辑
 ├── data/               # 测试数据
-│   └── login_cases.yaml
-├── lib/                # 公共工具库
-│   ├── api_client.py   # HTTP 请求基类 (Session, Log, Allure)
-│   ├── db_utils.py     # 数据库操作工具
-│   ├── notify.py       # 消息通知 (钉钉/飞书)
-│   └── utils.py        # 通用工具 (YAML读取, JSONPath提取)
-├── reports/            # 测试报告 (自动生成)
+├── lib/                # 工具库 (notify.py 已升级支持报告链接)
+├── allure-results/     # (自动生成) 存放测试原始 JSON 数据
 ├── tests/              # 测试用例
-│   ├── test_login_ddt.py  # 数据驱动登录测试
-│   └── test_orders.py     # 依赖登录状态的业务测试
-├── conftest.py         # Pytest 共享夹具 (Fixture)
-├── pytest.ini          # Pytest 运行配置
-├── Dockerfile          # Docker 构建文件
-└── requirements.txt    # 项目依赖
+├── conftest.py         # Pytest Fixture
+└── requirements.txt    # 依赖
+
+
+🚀 快速开始
+
+安装依赖
+
+pip install -r requirements.txt
+
+
+运行测试
+
+pytest

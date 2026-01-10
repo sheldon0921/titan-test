@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ "main", "master" ]
 
+# 🔑 必须配置权限，允许 CI 修改仓库内容(为了发布 GitHub Pages)
+permissions:
+  contents: write
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -24,25 +28,57 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Create report directory
-      run: mkdir -p reports
-
+    # 运行测试，生成原始 JSON 数据
     - name: Run Pytest
-      id: test_step  # 👈 给这个步骤起个 ID，方便后面判断状态
+      id: test_step
       env:
         ENV: dev
       run: |
-        # 运行测试，|| true 确保即使失败也会继续执行后面的步骤
-        pytest --alluredir=./reports || true
+        # 创建目录存放原始结果
+        mkdir -p allure-results
+        # 注意：这里指定 --alluredir=allure-results
+        pytest --alluredir=allure-results || true
 
-    # --- 新增步骤：发送钉钉通知 ---
+    # --- 📊 核心优化：生成 Allure HTML 报告 ---
+
+    # 1. 获取 gh-pages 分支的历史记录 (为了生成趋势图)
+    - name: Get Allure history
+      uses: actions/checkout@v4
+      if: always()
+      continue-on-error: true
+      with:
+        ref: gh-pages
+        path: gh-pages
+
+    # 2. 生成 HTML 报告
+    - name: Generate Allure Report
+      uses: simple-elf/allure-report-action@master
+      if: always()
+      id: allure-report
+      with:
+        allure_results: allure-results
+        gh_pages: gh-pages
+        allure_report: allure-report
+        allure_history: allure-history
+
+    # 3. 部署到 GitHub Pages
+    - name: Deploy Allure Report to GitHub Pages
+      if: always()
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_branch: gh-pages
+        publish_dir: allure-history
+
+    # --- 🔔 发送通知 (带在线报告链接) ---
     - name: Send DingTalk Notification
-      if: always() # 👈 无论测试成功还是失败，都执行这一步
+      if: always()
       env:
-        NOTIFY_WEBHOOK: ${{ secrets.NOTIFY_WEBHOOK }} # 读取 GitHub Secret
+        NOTIFY_WEBHOOK: ${{ secrets.NOTIFY_WEBHOOK }}
         CI_PIPELINE_URL: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        # 拼接报告 URL: https://<用户名>.github.io/<仓库名>/<构建号>/
+        REPORT_URL: "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}/"
       run: |
-        # 判断测试步骤是否成功
         if [ "${{ steps.test_step.outcome }}" == "success" ]; then
           STATUS="success"
         else
@@ -50,12 +86,5 @@ jobs:
         fi
         
         echo "发送通知，状态: $STATUS"
+        echo "报告地址: $REPORT_URL"
         python lib/notify.py $STATUS
-
-    - name: Upload Test Reports
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: allure-reports
-        path: reports/
-        retention-days: 3
