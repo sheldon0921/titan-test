@@ -2,41 +2,55 @@ import pytest
 import logging
 import sys
 import os
+import platform  # 👈 新增导入
 from api.auth_api import AuthApi
-from config.settings import config # 导入配置
+from config.settings import config
 
-# 1. 路径修复 (保持您之前的修复)
+# ... (路径修复代码保持不变) ...
 project_root = os.path.dirname(os.path.abspath(__file__))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 
+# --- 📌 优化点：自动生成 allure 环境信息 ---
+@pytest.fixture(scope="session", autouse=True)
+def add_allure_environment_property(request):
+    """
+    在测试结束后，向 allure-results 目录写入 environment.properties
+    """
+    # 确保 allure-results 目录存在
+    allure_dir = "allure-results"
+    if not os.path.exists(allure_dir):
+        os.makedirs(allure_dir)
+
+    env_info = {
+        "System": platform.system(),
+        "Python Version": platform.python_version(),
+        "Project": "Titan-Test",
+        "Target Env": os.environ.get("ENV", "dev"),
+        "Base URL": config.get("base_url", "unknown")
+    }
+
+    env_file = os.path.join(allure_dir, "environment.properties")
+    with open(env_file, "w", encoding="utf-8") as f:
+        for key, value in env_info.items():
+            f.write(f"{key}={value}\n")
+
+
+# ----------------------------------------
+
 @pytest.fixture(scope="session")
 def auth_client():
-    """
-    执行全局登录，并返回一个已经带了 Token 的 AuthApi 对象
-    """
+    # ... (原有的 fixture 代码保持不变) ...
     logging.info("🔐 --- 全局登录初始化 ---")
-
-    # 实例化业务对象
     api = AuthApi()
-
-    # 2. 从配置中读取账号 (不再硬编码)
     user_conf = config.get('auth', {})
     username = user_conf.get('username', 'default_user')
     password = user_conf.get('password', 'default_pass')
-
     logging.info(f"👤 使用账号登录: {username}")
     res = api.login(username, password)
-
-    # 模拟提取 Token (这里是为了演示，实际需根据 login 接口返回提取)
     fake_token = "titan-token-123456"
-
-    # 将 Token 更新到 session headers 中
     api.session.headers.update({"Authorization": f"Bearer {fake_token}"})
-
     yield api
-
-    # 👉 新增：测试结束后清理资源
     logging.info("🚪 --- 测试会话结束，正在清理资源 ---")
     api.close()
