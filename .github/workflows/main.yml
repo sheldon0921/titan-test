@@ -77,7 +77,9 @@ jobs:
         NOTIFY_WEBHOOK: ${{ secrets.NOTIFY_WEBHOOK }}
         CI_PIPELINE_URL: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         # 拼接报告 URL: https://<用户名>.github.io/<仓库名>/<构建号>/
-        REPORT_URL: "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}/"
+#        REPORT_URL: "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}/"
+        REPORT_URL: "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.html"
+
       run: |
         if [ "${{ steps.test_step.outcome }}" == "success" ]; then
           STATUS="success"
