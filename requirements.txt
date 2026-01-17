@@ -5,3 +5,4 @@ allure-pytest
 jsonpath
 pymysql
 urllib3<2.0.0  # 👈 新增这一行，强制使用 1.x 版本
+Pillow
