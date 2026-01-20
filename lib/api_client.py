@@ -14,6 +14,16 @@ class ApiClient:
         self.session = requests.Session()
         self.timeout = config.get("timeout", 10)
 
+        # ----------------------------------------
+        # 📌 新增：设置公共 Headers
+        # 这些头信息会应用到该 Session 发出的所有请求中
+        # ----------------------------------------
+        self.session.headers.update({
+            "Accept": "application/json",            # 期望接收 JSON 格式
+            "Content-Type": "application/json",      # 默认发送 JSON 格式
+            "Connection": "keep-alive"               # 保持长连接
+        })
+
     def send_request(self, method: str, url: str, **kwargs) -> requests.Response:
         kwargs.setdefault("timeout", self.timeout)
         kwargs.setdefault("verify", False)
