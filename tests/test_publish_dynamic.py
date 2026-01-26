@@ -1,52 +1,58 @@
 import pytest
 import allure
 import logging
+from lib.utils import load_yaml_data
+
+# 1. 加载 YAML 数据
+# 注意：为了防止文件不存在导致报错，最好做个容错，或者确保文件路径正确
+try:
+    test_data = load_yaml_data("data/publish_dynamic_cases.yaml")
+    if not test_data:
+        logging.warning("⚠️ 数据文件为空或读取失败")
+        test_data = []
+except Exception as e:
+    logging.error(f"❌ 加载测试数据异常: {e}")
+    test_data = []
 
 
 @allure.feature("社区动态模块")
 class TestPublishDynamic:
 
     @allure.story("发布动态")
-    @allure.description("发布动态接口测试")
-    def test_publish_dynamic_custom_headers(self, auth_client):
+    @allure.description("发布动态接口测试（数据驱动版）")
+    @pytest.mark.parametrize("case_info", test_data, ids=[i.get('title') for i in test_data])
+    def test_publish_dynamic(self, case_info, auth_client):
         """
-        :param auth_client: 已包含公共 Headers (User-Agent, Content-Type 等)
+        :param case_info: 从 yaml 中读取的单条测试数据
+        :param auth_client: 鉴权 Fixture
         """
+        # 2. 从 case_info 中提取数据
+        title = case_info.get("title")
+        payload = case_info.get("payload")
+        headers = case_info.get("headers")  # 可能是 None
+        expected = case_info.get("expected")
+
+        # 动态更新 Allure 报告的标题，让报告更清晰
+        allure.dynamic.title(title)
+
         url = f"{auth_client.base_url}/circle/dynamic/publishdynamic"
 
-        payload = {
-            "content": "“桃園三結義，江南無所有，聊贈一枝春。”萌寵相伴，春意滿懷，紙短情長，歲月溫柔。 🚀",
-            "check_status":	1,
-            "dynamic_id": 0,
-            "files_ids":"696589"
-        }
+        logging.info(f"🚀 开始执行用例: {title}")
+        logging.info(f"📤 Payload: {payload}")
+        if headers:
+            logging.info(f"🎩 Custom Headers: {headers}")
 
+        # 3. 发送请求
+        # auth_client.post 底层会自动合并 session headers 和这里的 headers
+        res = auth_client.post(url, json=payload, headers=headers)
 
-        # ----------------------------------------
-        # 场景：该接口需要额外的渠道标识，或者需要覆盖默认的 User-Agent
-        custom_headers = {
-            "api-client": "iOS",
-            "sign": "d9ac3282e89f64ad33ffc6fb6eddccf7",
-            "timestamp": "1768878451199",
-            "platform":"app"
-        }
+        # 打印响应以便调试
+        logging.info(f"📥 Response: {res.text}")
 
-        logging.info(f"📤 发送请求，附带个性化 Headers: {custom_headers}")
+        # 4. 断言
+        # 断言状态码
+        assert res.status_code == expected.get("status_code", 200)
 
-        # 直接将 headers 参数传给 post 方法
-        # 底层逻辑：requests 会自动做 merge 操作
-        res = auth_client.post(url, json=payload, headers=custom_headers)
-        logging.info(res.json())
-
-        assert res.status_code == 200
-
-
-        logging.info("✅ 接口调用成功，个性化 Headers 已生效")
-
-
-
-
-
-
-
-
+        # 示例：断言业务逻辑（假设返回结构里有 msg 字段）
+        # if "msg" in expected:
+        #     assert expected["msg"] in res.text
