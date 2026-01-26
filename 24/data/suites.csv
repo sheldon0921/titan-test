@@ -1,0 +1,3 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"发布动态接口测试（数据驱动版）","3042","发布动态_成功_带Header","tests","Mon Jan 26 10:15:52 UTC 2026","passed","Mon Jan 26 10:15:56 UTC 2026","TestPublishDynamic","test_publish_dynamic","",""
+"发布动态接口测试（数据驱动版）","519","发布动态_成功_常规发布","tests","Mon Jan 26 10:15:56 UTC 2026","passed","Mon Jan 26 10:15:56 UTC 2026","TestPublishDynamic","test_publish_dynamic","",""
