@@ -8,10 +8,10 @@
     files_ids: "696589"
   # 可选参数：如果有 headers 就传，没有就为 None
   headers:
-    api-client: "iOS"
-    sign: "d9ac3282e89f64ad33ffc6fb6eddccf7"
-    timestamp: "1768878451199"
-    platform: "app"
+#    api-client: "iOS"
+#    sign: "d9ac3282e89f64ad33ffc6fb6eddccf7"
+#    timestamp: "1768878451199"
+#    platform: "app"
   expected:
     status_code: 200
     msg: "success"  # 假设预期返回消息

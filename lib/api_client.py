@@ -74,7 +74,6 @@ class ApiClient:
                 allure.attach(str(e), name="异常堆栈", attachment_type=allure.attachment_type.TEXT)
                 raise e
 
-    # ... (其余方法保持不变) ...
     def get(self, url: str, **kwargs) -> requests.Response:
         return self.send_request("get", url, **kwargs)
 
