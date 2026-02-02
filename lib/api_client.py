@@ -52,7 +52,7 @@ class ApiClient:
                 try:
                     resp_text = json.dumps(response.json(), indent=2, ensure_ascii=False)
                     attach_type = allure.attachment_type.JSON
-                except:
+                except (json.JSONDecodeError, ValueError):
                     resp_text = response.text
                     attach_type = allure.attachment_type.TEXT
 
@@ -69,10 +69,22 @@ class ApiClient:
 
                 return response
 
+            except requests.exceptions.Timeout as e:
+                logging.error(f"❌ 请求超时: {method.upper()} {url} | 超时时间: {kwargs.get('timeout', self.timeout)}s")
+                allure.attach(str(e), name="请求超时", attachment_type=allure.attachment_type.TEXT)
+                raise requests.exceptions.Timeout(f"请求超时: {method.upper()} {url}") from e
+            except requests.exceptions.ConnectionError as e:
+                logging.error(f"❌ 连接失败: {method.upper()} {url} | {e}")
+                allure.attach(str(e), name="连接错误", attachment_type=allure.attachment_type.TEXT)
+                raise requests.exceptions.ConnectionError(f"连接失败: {method.upper()} {url}") from e
+            except requests.exceptions.RequestException as e:
+                logging.error(f"❌ 请求异常: {method.upper()} {url} | {e}")
+                allure.attach(str(e), name="请求异常", attachment_type=allure.attachment_type.TEXT)
+                raise requests.exceptions.RequestException(f"请求异常: {method.upper()} {url}") from e
             except Exception as e:
-                logging.error(f"❌ 请求异常: {e}")
-                allure.attach(str(e), name="异常堆栈", attachment_type=allure.attachment_type.TEXT)
-                raise e
+                logging.error(f"❌ 未知异常: {method.upper()} {url} | {e}")
+                allure.attach(str(e), name="未知异常", attachment_type=allure.attachment_type.TEXT)
+                raise RuntimeError(f"请求失败: {method.upper()} {url} - {e}") from e
 
     def get(self, url: str, **kwargs) -> requests.Response:
         return self.send_request("get", url, **kwargs)

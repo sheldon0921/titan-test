@@ -11,11 +11,11 @@ if __name__ == "__main__":
 
 
 class DingTalkNotifier:
-    def __init__(self, webhook_url: str):
+    def __init__(self, webhook_url: str) -> None:
         self.webhook_url = webhook_url
         self.headers = {"Content-Type": "application/json"}
 
-    def send_msg(self, status: str, pipeline_url: str, report_url: str = None):
+    def send_msg(self, status: str, pipeline_url: str, report_url: Optional[str] = None) -> None:
         """
         发送钉钉通知
         :param status: 构建状态 (success/failed)

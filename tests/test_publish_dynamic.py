@@ -27,10 +27,17 @@ class TestPublishDynamic:
         :param auth_client: 鉴权 Fixture
         """
         # 2. 从 case_info 中提取数据
-        title = case_info.get("title")
+        title = case_info.get("title", "未知用例")
         payload = case_info.get("payload")
         headers = case_info.get("headers")  # 可能是 None
-        expected = case_info.get("expected")
+        expected = case_info.get("expected", {})
+
+        # 验证测试数据完整性
+        if not payload:
+            pytest.skip(f"⚠️ 用例 '{title}' 缺少 payload 数据")
+
+        if not expected:
+            pytest.skip(f"⚠️ 用例 '{title}' 缺少 expected 数据")
 
         # 动态更新 Allure 报告的标题，让报告更清晰
         allure.dynamic.title(title)
@@ -51,7 +58,8 @@ class TestPublishDynamic:
 
         # 4. 断言
         # 断言状态码
-        assert res.status_code == expected.get("status_code", 200)
+        assert res.status_code == expected.get("status_code", 200), \
+            f"状态码不匹配: 期望 {expected.get('status_code')}, 实际 {res.status_code}"
 
         # 示例：断言业务逻辑（假设返回结构里有 msg 字段）
         # if "msg" in expected:
