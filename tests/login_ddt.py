@@ -40,22 +40,46 @@ class TestLogin:
         # 动态设置 Allure 标题
         allure.dynamic.title(case_info.get('title', '登录测试'))
 
-        # 发起请求
-        res = self.auth_api.login(payload.get('username', ''), payload.get('password', ''))
+        # 步骤1: 准备登录数据
+        with allure.step("步骤1: 准备登录凭证"):
+            username = payload.get('username', '')
+            password = payload.get('password', '')
+            allure.attach(
+                f"用户名: {username}\n密码: {password[:3]}***" if password else f"用户名: {username}",
+                name="登录凭证",
+                attachment_type=allure.attachment_type.TEXT
+            )
+            logging.info(f"准备使用用户名登录: {username}")
 
-        # 1. 基础断言：状态码
-        assert res.status_code == expected.get('status_code', 200), \
-            f"状态码不匹配: 期望 {expected.get('status_code')}, 实际 {res.status_code}"
+        # 步骤2: 发起登录请求
+        with allure.step("步骤2: 发起登录请求"):
+            res = self.auth_api.login(username, password)
 
-        # 2. 分支断言：根据预期结果做不同的检查
-        # 如果预期是成功，我们才去校验返回结果里有没有用户名
-        if expected.get('msg') == "success":
-            actual_user = get_json_value(res.json(), "$.json.username")
-            assert actual_user == payload.get('username'), \
-                f"用户名不匹配: 期望 {payload.get('username')}, 实际 {actual_user}"
+        # 步骤3: 验证响应状态码
+        with allure.step("步骤3: 验证响应状态码"):
+            expected_status = expected.get('status_code', 200)
+            allure.attach(
+                f"预期状态码: {expected_status}\n实际状态码: {res.status_code}",
+                name="状态码验证",
+                attachment_type=allure.attachment_type.TEXT
+            )
+            assert res.status_code == expected_status, \
+                f"状态码不匹配: 期望 {expected_status}, 实际 {res.status_code}"
 
-        else:
-            # 如果预期是失败，我们通常校验错误提示信息
-            # (注意：因为用的 httpbin 模拟，这里无法真正校验错误msg，但在真实项目中应该这样写)
-            logging.info(f"ℹ️ 这是一个预期失败的用例: {case_info.get('title', '未知')}")
-            # 示例：assert expected['msg'] in res.text
+        # 步骤4: 验证登录结果
+        with allure.step("步骤4: 验证登录结果"):
+            if expected.get('msg') == "success":
+                actual_user = get_json_value(res.json(), "$.json.username")
+                allure.attach(
+                    f"预期用户名: {payload.get('username')}\n实际用户名: {actual_user}",
+                    name="用户名验证",
+                    attachment_type=allure.attachment_type.TEXT
+                )
+                assert actual_user == payload.get('username'), \
+                    f"用户名不匹配: 期望 {payload.get('username')}, 实际 {actual_user}"
+                logging.info(f"✅ 登录成功，用户名验证通过: {actual_user}")
+            else:
+                # 如果预期是失败，我们通常校验错误提示信息
+                # (注意：因为用的 httpbin 模拟，这里无法真正校验错误msg，但在真实项目中应该这样写)
+                logging.info(f"ℹ️ 这是一个预期失败的用例: {case_info.get('title', '未知')}")
+                # 示例：assert expected['msg'] in res.text

@@ -1,21 +1,24 @@
 # data/publish_dynamic_cases.yaml
+# 测试场景：发布动态接口
 
+# 场景1: 成功发布动态（带自定义 Header）
 - title: "发布动态_成功_带Header"
   payload:
-    content: "“桃園三結義，江南無所有，聊贈一枝春。”萌寵相伴，春意滿懷，紙短情長，歲月溫柔。 🚀"
+    content: "桃園三結義，江南無所有，聊贈一枝春。萌寵相伴，春意滿懷，紙短情長，歲月溫柔。 🚀"
     check_status: 1
     dynamic_id: 0
     files_ids: "696589"
   # 可选参数：如果有 headers 就传，没有就为 None
   headers:
-#    api-client: "iOS"
-#    sign: "d9ac3282e89f64ad33ffc6fb6eddccf7"
-#    timestamp: "1768878451199"
-#    platform: "app"
+    api-client: "iOS"
+    sign: "d9ac3282e89f64ad33ffc6fb6eddccf7"
+    timestamp: "1768878451199"
+    platform: "app"
   expected:
     status_code: 200
-    msg: "success"  # 假设预期返回消息
+    msg: "success"
 
+# 场景2: 成功发布动态（常规发布）
 - title: "发布动态_成功_常规发布"
   payload:
     content: "测试常规发布动态，不带特殊Header"
@@ -26,3 +29,26 @@
   expected:
     status_code: 200
     msg: "success"
+
+# 场景3: 发布失败（缺少必要参数）
+- title: "发布动态_失败_缺少内容"
+  payload:
+    check_status: 1
+    dynamic_id: 0
+    files_ids: ""
+  headers: null
+  expected:
+    status_code: 400
+    msg: "参数错误"
+
+# 场景4: 发布失败（内容为空）
+- title: "发布动态_失败_内容为空"
+  payload:
+    content: ""
+    check_status: 1
+    dynamic_id: 0
+    files_ids: ""
+  headers: null
+  expected:
+    status_code: 400
+    msg: "内容不能为空"
