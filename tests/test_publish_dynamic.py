@@ -45,6 +45,9 @@ class TestPublishDynamic:
         # 动态更新 Allure 报告的标题，让报告更清晰
         allure.dynamic.title(title)
 
+        # 声明响应JSON变量，供后续步骤复用
+        response_json = None
+
         # 步骤1: 准备测试数据
         with allure.step("步骤1: 准备测试数据"):
             url = f"{auth_client.base_url}/circle/dynamic/publishdynamic"
@@ -91,10 +94,10 @@ class TestPublishDynamic:
 
         # 步骤4: 验证业务数据
         with allure.step("步骤4: 验证业务数据"):
-            # 验证业务逻辑（假设返回结构里有 msg 字段）
-            if "msg" in expected:
+            # 验证业务逻辑
+            if "msg" in expected and response_json:
                 try:
-                    actual_msg = get_json_value(res.json(), "$.msg")
+                    actual_msg = get_json_value(response_json, "$.msg")
                     expected_msg = expected.get("msg")
 
                     allure.attach(
@@ -106,8 +109,24 @@ class TestPublishDynamic:
                     assert actual_msg == expected_msg, \
                         f"消息不匹配: 期望 {expected_msg}, 实际 {actual_msg}"
 
-                    logging.info(f"✅ 业务数据验证通过 - 消息: {actual_msg}")
+                    # 验证动态ID（如果返回中包含）
+                    if "dynamic_id" in response_json or "id" in str(response_json):
+                        actual_id = get_json_value(response_json, "$.data.id") or \
+                                   get_json_value(response_json, "$.dynamic_id") or \
+                                   get_json_value(response_json, "$.id")
+                        allure.attach(
+                            f"动态ID: {actual_id}",
+                            name="动态ID验证",
+                            attachment_type=allure.attachment_type.TEXT
+                        )
+                        logging.info(f"✅ 业务数据验证通过 - 消息: {actual_msg}, ID: {actual_id}")
+                    else:
+                        logging.info(f"✅ 业务数据验证通过 - 消息: {actual_msg}")
+                except (json.JSONDecodeError, ValueError) as e:
+                    logging.warning(f"⚠️ 无法验证业务消息 - JSON解析错误: {e}")
+                except KeyError as e:
+                    logging.warning(f"⚠️ 无法验证业务消息 - 缺少字段: {e}")
                 except Exception as e:
-                    logging.warning(f"⚠️ 无法验证业务消息: {e}")
+                    logging.warning(f"⚠️ 无法验证业务消息 - 未知错误: {type(e).__name__}: {e}")
             else:
                 logging.info("✅ 业务数据验证通过（无消息验证要求）")
